@@ -35,7 +35,8 @@ cache = Cache(app)
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"]
+    default_limits=["1000 per day", "200 per hour"],
+    storage_uri="memory://"
 )
 
 # Ensure upload directory exists
@@ -164,18 +165,29 @@ def process_files(excel_path, logo_path):
         # Read Excel file in a memory-efficient way
         logger.info(f"Reading Excel file: {excel_path}")
         df = pd.read_excel(excel_path, engine='openpyxl')
-        names = df['Name'].tolist()
-        logger.info(f"Found {len(names)} names in Excel file")
+        
+        # Ensure required columns exist
+        required_columns = ['Name', 'Quantity', 'Category']
+        for col in required_columns:
+            if col not in df.columns:
+                df[col] = ''  # Add empty column if it doesn't exist
+                if col == 'Quantity':
+                    df[col] = 1  # Default quantity to 1
+                if col == 'Category':
+                    df[col] = 'Default'  # Default category
+        
+        data_df = df[required_columns]
+        logger.info(f"Found {len(data_df)} entries in Excel file")
         
         template_path = 'public/dxf_template/template.dxf'
         output_path = os.path.join(app.config['UPLOAD_FOLDER'], 'output.dxf')
         
         if logo_path:
             logger.info("Processing with logo")
-            duplicate_entities(template_path, output_path, logo_path, names)
+            duplicate_entities(template_path, output_path, logo_path, data_df)
         else:
             logger.info("Processing without logo")
-            duplicate_entities(template_path, output_path, None, names)
+            duplicate_entities(template_path, output_path, None, data_df)
             
         logger.info(f"Successfully created output file: {output_path}")
         return output_path
@@ -189,8 +201,17 @@ def index():
     return render_template('index.html')
 
 @app.route('/progress')
+@limiter.exempt
 def get_progress():
-    return jsonify(progress_tracker.data)
+    try:
+        return jsonify({
+            'progress': progress_tracker._progress,
+            'status': progress_tracker._status,
+            'complete': progress_tracker._complete
+        })
+    except Exception as e:
+        logger.error(f"Error in progress endpoint: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/upload', methods=['POST'])
 @limiter.limit("10 per minute")
