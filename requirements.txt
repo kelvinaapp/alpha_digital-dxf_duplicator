@@ -4,3 +4,6 @@ openpyxl==3.1.2
 werkzeug==3.0.1
 ezdxf==1.1.1
 matplotlib==3.8.2
+gunicorn==21.2.0
+flask-limiter==3.5.0
+flask-caching==2.1.0

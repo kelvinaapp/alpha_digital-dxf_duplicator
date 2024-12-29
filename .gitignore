@@ -3,6 +3,7 @@ test.dxf
 textpath_r12.dxf
 logo-untar.dxf
 public/logo
+.env
 
 
 # Python
