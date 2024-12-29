@@ -1,0 +1,37 @@
+logging: CLOUD_LOGGING_ONLY
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/iykra-437909/alpha-digital-dxf_duplicator', '.']
+
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/iykra-437909/alpha-digital-dxf_duplicator']
+
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'alpha-digital'
+      - '--image'
+      - 'gcr.io/iykra-437909/alpha-digital-dxf_duplicator'
+      - '--region'
+      - 'asia-southeast2'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      # - '--memory'
+      # - '512Mi'
+      # - '--cpu'
+      # - '1'
+      # - '--min-instances'
+      # - '0'
+      # - '--max-instances'
+      # - '10'
+      # - '--port'
+      # - '8080'
+
+images:
+  - 'gcr.io/iykra-437909/alpha-digital-dxf_duplicator'

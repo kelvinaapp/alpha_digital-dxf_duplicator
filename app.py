@@ -17,6 +17,7 @@ from logging.handlers import RotatingFileHandler
 import tempfile
 from functools import wraps
 import time
+from src.progress_tracker import progress_tracker
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -42,33 +43,6 @@ limiter = Limiter(
 # Ensure upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Global progress tracking using a class for thread safety
-class ProgressTracker:
-    def __init__(self):
-        self._progress = 0.0
-        self._status = 'Waiting for upload...'
-        self._complete = False
-
-    def update(self, progress, status):
-        self._progress = progress
-        self._status = status
-        self._complete = (progress >= 1.0)
-
-    def reset(self):
-        self._progress = 0.0
-        self._status = 'Starting process...'
-        self._complete = False
-
-    @property
-    def data(self):
-        return {
-            'progress': self._progress,
-            'status': self._status,
-            'complete': self._complete
-        }
-
-progress_tracker = ProgressTracker()
-
 ALLOWED_EXTENSIONS = {'dxf', 'xlsx', 'xls'}
 
 def allowed_file(filename):
@@ -86,7 +60,7 @@ def timing_decorator(f):
 
 @timing_decorator
 def dxf_to_image(doc):
-    progress_tracker.update(0.8, 'Generating preview image...')
+    # progress_tracker.update(0.8, 'Generating preview image...')
     tmp_file = None
     
     try:
@@ -234,7 +208,7 @@ def upload_file():
             logger.error(f"Invalid file type for excel file: {excel_file.filename}")
             return jsonify({'error': 'Invalid file type. Allowed types are: ' + ', '.join(ALLOWED_EXTENSIONS)}), 400
 
-        progress_tracker.update(0.1, 'Processing uploaded files...')
+        progress_tracker.update(0.05, 'Processing uploaded files...')
         logger.info(f"Processing excel file: {excel_file.filename}")
 
         # Handle optional logo file
@@ -248,7 +222,7 @@ def upload_file():
                     return jsonify({'error': 'Invalid logo file type'}), 400
                 logger.info(f"Processing logo file: {logo_file.filename}")
 
-        progress_tracker.update(0.2, 'Saving files...')
+        progress_tracker.update(0.1, 'Saving files...')
 
         # Ensure upload directory exists
         if not os.path.exists(app.config['UPLOAD_FOLDER']):
@@ -270,14 +244,14 @@ def upload_file():
             progress_tracker.update(1.0, f'Error: {str(e)}')
             return jsonify({'error': f'Error saving files: {str(e)}'}), 500
 
-        progress_tracker.update(0.4, 'Processing files...')
+        progress_tracker.update(0.15, 'Processing files...')
 
         try:
             # Process the files and generate preview
             output_path = process_files(excel_path, logo_path)
             logger.info(f"Generated output file at: {output_path}")
             
-            progress_tracker.update(0.8, 'Generating preview...')
+            progress_tracker.update(0.85, 'Generating preview...')
             
             # Generate preview image
             doc = ezdxf.readfile(output_path)

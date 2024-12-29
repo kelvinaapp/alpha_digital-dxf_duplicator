@@ -5,6 +5,7 @@ from ezdxf.fonts import fonts
 from ezdxf.addons.importer import Importer
 from ezdxf.math import Matrix44
 import pandas as pd
+from src.progress_tracker import progress_tracker
 
 # Constants
 # logo size = 18.5%
@@ -287,6 +288,8 @@ def duplicate_entities(source_file, target_file, logo_file, data_df):
         logo_file: Logo file path (optional)
         data_df: DataFrame with columns: Name, Quantity, Category
     """
+    progress_tracker.update(0.15, 'Preparing template list...')
+    
     # Create list of all positions (filled and empty)
     full_template_list = []
     current_row = 0
@@ -294,7 +297,9 @@ def duplicate_entities(source_file, target_file, logo_file, data_df):
     last_category = None
     
     # Process each row in the DataFrame
-    for _, row in data_df.iterrows():
+    total_items = len(data_df)
+    for idx, row in data_df.iterrows():
+        
         name = row['Name']
         # Handle NaN values in Quantity column, default to 1
         quantity = 1 if pd.isna(row['Quantity']) else int(row['Quantity'])
@@ -302,7 +307,6 @@ def duplicate_entities(source_file, target_file, logo_file, data_df):
         
         # Add category separator if category changes
         if last_category is not None and category != last_category:
-            # Add one empty entity
             full_template_list.append({
                 'position': (current_row, current_col),
                 'name': '',
@@ -327,6 +331,8 @@ def duplicate_entities(source_file, target_file, logo_file, data_df):
         
         last_category = category
     
+    progress_tracker.update(0.25, 'Finalizing template list...')
+    
     # Only pad the last category to reach multiple of 10
     if current_col > 0:  # Only if we're not already at the start of a new row
         empty_slots_needed = 10 - current_col
@@ -338,6 +344,8 @@ def duplicate_entities(source_file, target_file, logo_file, data_df):
             })
             current_col += 1
 
+    progress_tracker.update(0.3, 'Loading source file...')
+    
     # Load and prepare source file
     doc = ezdxf.readfile(source_file)
     msp = doc.modelspace()
@@ -353,10 +361,9 @@ def duplicate_entities(source_file, target_file, logo_file, data_df):
     base_x = original_extents.extmin[0]
     base_y = original_extents.extmin[1]
     
-    logo_exist = False
+    logo_exist = bool(logo_file)
     
-    if logo_file:
-        logo_exist = True
+    progress_tracker.update(0.35, 'Processing first template...')
     
     # Process original entity (first template)
     first_template = full_template_list[0]
@@ -369,7 +376,11 @@ def duplicate_entities(source_file, target_file, logo_file, data_df):
         add_text_to_entity(msp, first_template['name'], dims['center_x'], dims['center_y'], dims['text_height'], "Calisto", logo_exist)
     
     # Process remaining templates
+    total_templates = len(full_template_list[1:])
     for i, template in enumerate(full_template_list[1:], 1):
+        progress = 0.35 + (0.45 * (i / total_templates))
+        progress_tracker.update(progress, f'Processing template {i} of {total_templates + 1}')
+        
         target_x, target_y = calculate_layout_position(i, dims['width'], dims['height'], base_x, base_y)
         
         # Copy and transform entities (even for empty templates)
@@ -388,7 +399,10 @@ def duplicate_entities(source_file, target_file, logo_file, data_df):
                 
             add_text_to_entity(msp, template['name'], current_center_x, current_center_y, dims['text_height'], "Calisto", logo_exist)
     
+    progress_tracker.update(0.8, 'Saving file...')
     doc.saveas(target_file)
+    
+    progress_tracker.update(0.85, 'Complete!')
     print(f"Created {len(data_df)} templates with {len(full_template_list) - len(data_df)} empty templates to reach {len(full_template_list)} total templates")
 
 if __name__ == "__main__":
