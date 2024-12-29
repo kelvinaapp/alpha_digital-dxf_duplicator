@@ -22,7 +22,7 @@ COPY . .
 
 # Install fonts
 RUN mkdir -p /usr/share/fonts/truetype/custom
-COPY static/fonts/*.ttf /usr/share/fonts/truetype/custom/
+COPY static/fonts/*.TTF /usr/share/fonts/truetype/custom/
 RUN fc-cache -f -v
 
 # Create required directories
