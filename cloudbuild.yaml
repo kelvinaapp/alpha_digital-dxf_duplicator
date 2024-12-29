@@ -29,8 +29,8 @@ steps:
       # - '0'
       # - '--max-instances'
       # - '10'
-      # - '--port'
-      # - '8080'
+      - '--port'
+      - '8080'
 
 images:
   - 'gcr.io/iykra-437909/alpha-digital-dxf_duplicator'
