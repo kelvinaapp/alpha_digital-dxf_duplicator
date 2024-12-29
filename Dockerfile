@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     python3-dev \
     libfreetype6-dev \
     pkg-config \
+    fontconfig \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first to leverage Docker cache
@@ -18,6 +19,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application
 COPY . .
+
+# Install fonts
+RUN mkdir -p /usr/share/fonts/truetype/custom
+COPY static/fonts/*.ttf /usr/share/fonts/truetype/custom/
+RUN fc-cache -f -v
 
 # Create required directories
 RUN mkdir -p uploads temp public/dxf_template
