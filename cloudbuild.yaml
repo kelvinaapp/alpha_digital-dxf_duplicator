@@ -1,4 +1,3 @@
-logging: CLOUD_LOGGING_ONLY
 steps:
   # Build the container image
   - name: 'gcr.io/cloud-builders/docker'
@@ -35,3 +34,6 @@ steps:
 
 images:
   - 'gcr.io/iykra-437909/alpha-digital-dxf_duplicator'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
